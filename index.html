@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Сверка маркировок</title>
+<style>
+:root{--bg:#f4f6fa;--fg:#1a2233;--card:#fff;--mut:#6b7686;--line:#dde2ea;--acc:#1f4fd8;--ok:#0a7d33;--okb:#d8f3e1;--bad:#b3261e;--badb:#fde0de;--warn:#8a5a00;--warnb:#fdeec8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10141c;--fg:#e8ecf4;--card:#1a212d;--mut:#98a3b5;--line:#2a3342;--acc:#6e97ff;--ok:#5fd68a;--okb:#12341f;--bad:#ff8a80;--badb:#3d1815;--warn:#f2c14e;--warnb:#3a2d0c}}
+:root[data-theme="dark"]{--bg:#10141c;--fg:#e8ecf4;--card:#1a212d;--mut:#98a3b5;--line:#2a3342;--acc:#6e97ff;--ok:#5fd68a;--okb:#12341f;--bad:#ff8a80;--badb:#3d1815;--warn:#f2c14e;--warnb:#3a2d0c}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 Arial,Helvetica,sans-serif;padding-bottom:72px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--card);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--card);border-bottom:1px solid var(--line);z-index:9;padding:10px 14px}
+h1{font-size:18px;margin:0}
+main{padding:12px;max-width:640px;margin:0 auto}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:9}
+nav button{flex:1;border:0;background:none;color:var(--mut);padding:12px 4px;font:inherit;font-size:14px;font-weight:bold}
+nav button.on{color:var(--acc);box-shadow:inset 0 3px 0 var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+textarea,input[type=text],input[type=number]{width:100%;font:15px/1.3 monospace;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+textarea{min-height:200px}
+.btn{border:0;border-radius:10px;padding:13px 16px;font:inherit;font-weight:bold;background:var(--acc);color:#fff;width:100%;margin-top:8px}
+.btn.sec{background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+.btn.red{background:var(--bad);color:#fff}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.mut{color:var(--mut);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.st b{display:block;font-size:24px}
+.big{border-radius:14px;padding:16px;text-align:center;margin:12px 0;background:var(--card);border:1px solid var(--line)}
+.big b{display:block;font-size:30px}.big span{font:12px monospace;word-break:break-all;display:block;margin-top:6px}
+.ok{background:var(--okb);color:var(--ok)}.bad{background:var(--badb);color:var(--bad)}.warn{background:var(--warnb);color:var(--warn)}
+.item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.item code{flex:1;font:12px monospace;word-break:break-all}
+.chip{font-size:11px;font-weight:bold;border-radius:20px;padding:3px 8px;white-space:nowrap}
+.x{border:0;background:none;color:var(--mut);font-size:20px;padding:4px 8px}
+h2{font-size:15px;margin:0 0 6px}
+.verdict{font-size:20px;font-weight:bold;text-align:center;padding:16px;border-radius:12px;margin-bottom:12px}
+video{width:100%;border-radius:10px;margin-top:8px;background:#000}
+.hide{display:none}
+</style>
+</head>
+<body>
+<header><h1>Сверка маркировок</h1></header>
+<main>
+<section id="t-inv">
+  <div class="card">
+    <h2>Коды из счёта-фактуры</h2>
+    <p class="mut">Вставьте коды (каждый с новой строки). Данные сохраняются на телефоне.</p>
+    <textarea id="inv" placeholder="Вставьте сюда коды…" autocapitalize="none" autocomplete="off" spellcheck="false"></textarea>
+    <p class="mut" id="invinfo"></p>
+  </div>
+  <div class="card">
+    <h2>Длина сравнения, символов</h2>
+    <input type="number" id="n" min="0" inputmode="numeric">
+    <p class="mut">0 — код целиком. Если в СФ короткие коды, а сканер читает полные, укажите длину короткой формы (часто 31 — проверьте по своим кодам).</p>
+  </div>
+  <button class="btn" data-go="scan">Начать сканирование →</button>
+</section>
+
+<section id="t-scan" class="hide">
+  <div class="stats">
+    <div class="st"><b id="s1">0</b><span class="mut">пробито</span></div>
+    <div class="st"><b id="s2">0</b><span class="mut">из СФ</span></div>
+    <div class="st"><b id="s3">0</b><span class="mut">ошибок</span></div>
+  </div>
+  <div class="card">
+    <input type="text" id="code" placeholder="Курсор здесь — пробивайте сканером" autocapitalize="none" autocomplete="off" spellcheck="false" enterkeyhint="done">
+    <div class="row"><button class="btn" id="add">Добавить</button><button class="btn sec" id="cam">Камера</button></div>
+    <label class="btn sec" style="display:block;text-align:center">Фото кода<input type="file" id="ph" accept="image/*" capture="environment" class="hide"></label>
+    <video id="vid" class="hide" playsinline muted></video>
+    <div id="msg" class="mut"></div>
+  </div>
+  <div class="big hide" id="last"></div>
+  <div class="card"><h2>Последние пробития</h2><div id="list"></div>
+    <button class="btn sec" id="undo">Отменить последнее</button></div>
+</section>
+
+<section id="t-res" class="hide">
+  <div class="verdict" id="verdict"></div>
+  <div class="stats" id="rstats"></div>
+  <div id="lists"></div>
+  <button class="btn" id="copy">Скопировать отчёт</button>
+  <textarea id="rep" class="hide" readonly style="margin-top:8px"></textarea>
+  <button class="btn red" id="clear">Новая сверка (очистить всё)</button>
+</section>
+</main>
+<nav>
+  <button data-go="inv" class="on">1. Счёт-фактура</button>
+  <button data-go="scan">2. Скан</button>
+  <button data-go="res">3. Итог</button>
+</nav>
+<script src="zxing.min.js"></script>
+<script>
+var S={inv:"",scans:[],n:0,tab:"inv"};
+try{var sv=localStorage.getItem("sverka");if(sv)S=Object.assign(S,JSON.parse(sv))}catch(e){}
+var $=function(i){return document.getElementById(i)};
+function save(){try{localStorage.setItem("sverka",JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function key(s){s=String(s).replace(/[\x00-\x1f\x7f]/g,"").trim();return S.n>0?s.slice(0,S.n):s}
+function calc(){
+  var list=S.inv.split(/[\s;,]+/).map(key).filter(Boolean),set=new Set(list);
+  var seen=new Set(),items=S.scans.map(function(raw,i){var k=key(raw),st;
+    if(seen.has(k))st="ДУБЛЬ";else{seen.add(k);st=set.has(k)?"ОК":"НЕТ В СФ"}return{raw:raw,k:k,st:st,i:i}});
+  return{total:list.length,set:set,invDup:list.length-set.size,items:items,seen:seen,
+    miss:Array.from(set).filter(function(x){return!seen.has(x)}),
+    extra:items.filter(function(x){return x.st==="НЕТ В СФ"}),
+    dups:items.filter(function(x){return x.st==="ДУБЛЬ"}),
+    ok:items.filter(function(x){return x.st==="ОК"}).length}
+}
+var CLS={"ОК":"ok","НЕТ В СФ":"bad","ДУБЛЬ":"warn"};
+function beep(st){try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+  o.frequency.value=st==="ОК"?880:220;g.gain.value=.15;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(st==="ОК"?.08:.3))}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate(st==="ОК"?40:[120,60,120])}catch(e){}}
+function add(raw){
+  raw=String(raw).replace(/[\x00-\x1f\x7f]/g,"").trim();if(!raw)return;
+  S.scans.push(raw);save();var c=calc(),it=c.items[c.items.length-1];
+  var b=$("last");b.className="big "+CLS[it.st];b.innerHTML="<b>"+it.st+"</b><span>"+esc(it.k)+"</span>";
+  beep(it.st);render();
+}
+function render(){
+  var c=calc();
+  $("invinfo").textContent="Кодов: "+c.total+" (уникальных: "+c.set.size+(c.invDup?", повторов в СФ: "+c.invDup:"")+")";
+  $("s1").textContent=c.items.length;$("s2").textContent=c.ok+" / "+c.set.size;$("s3").textContent=c.extra.length+c.dups.length;
+  $("list").innerHTML=c.items.slice(-40).reverse().map(function(x){
+    return '<div class="item"><span class="chip '+CLS[x.st]+'">'+x.st+'</span><code>'+esc(x.k)+'</code><button class="x" data-del="'+x.i+'">×</button></div>'}).join("")||'<p class="mut">Пока пусто</p>';
+  var v=$("verdict"),none=!c.total&&!c.items.length,good=!c.miss.length&&!c.extra.length&&!c.dups.length;
+  v.className="verdict "+(none?"":good?"ok":"bad");v.textContent=none?"Нет данных":good?"СВЕРКА СОШЛАСЬ":"ЕСТЬ РАСХОЖДЕНИЯ";
+  $("rstats").innerHTML=[["в СФ",c.set.size],["пробито",c.items.length],["совпало",c.ok],["не пробито",c.miss.length],["лишние",c.extra.length],["дубли",c.dups.length+c.invDup]]
+    .map(function(a){return'<div class="st"><b>'+a[1]+'</b><span class="mut">'+a[0]+'</span></div>'}).join("");
+  function blk(t,arr,cl){return arr.length?'<div class="card"><h2 class="'+cl+'" style="background:none">'+t+' ('+arr.length+')</h2>'+arr.map(function(x){return'<div class="item"><code>'+esc(x)+'</code></div>'}).join("")+'</div>':""}
+  $("lists").innerHTML=blk("НЕ пробито (есть в СФ)",c.miss,"bad")+blk("Лишние (нет в СФ)",c.extra.map(function(x){return x.k}),"bad")+blk("Повторные пробития",c.dups.map(function(x){return x.k}),"warn");
+}
+function go(t){S.tab=t;save();["inv","scan","res"].forEach(function(x){$("t-"+x).classList.toggle("hide",x!==t)});
+  document.querySelectorAll("nav button").forEach(function(b){b.classList.toggle("on",b.dataset.go===t)});
+  render();window.scrollTo(0,0);if(t==="scan")setTimeout(function(){$("code").focus()},50)}
+document.addEventListener("click",function(e){var t=e.target;
+  if(t.dataset.go)go(t.dataset.go);
+  if(t.dataset.del!==undefined){S.scans.splice(+t.dataset.del,1);save();render()}});
+$("inv").value=S.inv;$("n").value=S.n;
+$("inv").addEventListener("input",function(){S.inv=this.value;save();render()});
+$("n").addEventListener("input",function(){S.n=Math.max(0,parseInt(this.value)||0);save();render()});
+$("code").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();add(this.value);this.value=""}});
+$("add").addEventListener("click",function(){add($("code").value);$("code").value="";$("code").focus()});
+$("undo").addEventListener("click",function(){S.scans.pop();save();$("last").className="hide";render()});
+var armed=false;
+$("clear").addEventListener("click",function(){
+  if(!armed){armed=true;this.textContent="Нажмите ещё раз — всё удалится";var b=this;setTimeout(function(){armed=false;b.textContent="Новая сверка (очистить всё)"},3500);return}
+  S.inv="";S.scans=[];save();$("inv").value="";armed=false;this.textContent="Новая сверка (очистить всё)";go("inv")});
+$("copy").addEventListener("click",function(){
+  var c=calc(),t=["СВЕРКА МАРКИРОВОК","В СФ: "+c.set.size+", пробито: "+c.items.length+", совпало: "+c.ok,
+    "НЕ ПРОБИТО ("+c.miss.length+"):"].concat(c.miss,["ЛИШНИЕ ("+c.extra.length+"):"],c.extra.map(function(x){return x.k}),
+    ["ДУБЛИ ("+c.dups.length+"):"],c.dups.map(function(x){return x.k})).join("\n");
+  var r=$("rep");r.value=t;
+  try{navigator.clipboard.writeText(t).then(function(){$("copy").textContent="Скопировано ✓"},function(){r.classList.remove("hide");r.select()})}
+  catch(e){r.classList.remove("hide");r.select()}});
+var stream=null,timer=null,lastC="",lastT=0,cv=document.createElement("canvas"),bd=null,zr=null;
+try{if("BarcodeDetector" in window)bd=new BarcodeDetector({formats:["data_matrix","qr_code","ean_13","code_128"]})}catch(e){}
+function zx(){if(zr||!window.ZXing)return zr;var Z=ZXing,h=new Map();h.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.DATA_MATRIX,Z.BarcodeFormat.QR_CODE,Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.CODE_128]);h.set(Z.DecodeHintType.TRY_HARDER,true);zr=new Z.MultiFormatReader();zr.setHints(h);return zr}
+async function decode(src,w,h){
+  if(bd){try{var r=await bd.detect(src);if(r.length)return r[0].rawValue}catch(e){}}
+  var z=zx();if(!z)return null;
+  cv.width=w;cv.height=h;cv.getContext("2d",{willReadFrequently:true}).drawImage(src,0,0,w,h);
+  try{var Z=ZXing;return z.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText()}catch(e){return null}}
+function stopCam(){if(timer)clearInterval(timer);timer=null;if(stream)stream.getTracks().forEach(function(t){t.stop()});stream=null;$("vid").classList.add("hide");$("cam").textContent="Камера"}
+$("cam").addEventListener("click",async function(){
+  if(stream){stopCam();return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("msg").textContent="Браузер не даёт доступ к камере здесь. Откройте ссылку в Chrome/Safari или нажмите «Фото кода».";return}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    var v=$("vid");v.srcObject=stream;v.classList.remove("hide");await v.play();this.textContent="Стоп камера";$("msg").textContent="";
+    var busy=false;
+    timer=setInterval(async function(){if(busy||!v.videoWidth)return;busy=true;try{
+      var sc=Math.min(1,1000/v.videoWidth),val=await decode(v,Math.round(v.videoWidth*sc),Math.round(v.videoHeight*sc)),now=Date.now();
+      if(val&&(val!==lastC||now-lastT>2500)){lastC=val;lastT=now;add(val)}}catch(e){}busy=false},350)}
+  catch(e){stopCam();$("msg").textContent=(e&&e.name==="NotAllowedError"?"Камера запрещена: разрешите доступ в браузере или откройте ссылку в Chrome/Safari (во встроенном окне камера часто блокируется). ":"Камера недоступна ("+(e&&e.name||"ошибка")+"). ")+"Можно нажать «Фото кода»."}});
+$("ph").addEventListener("change",async function(){
+  var f=this.files&&this.files[0];this.value="";if(!f)return;$("msg").textContent="Распознаю…";
+  try{var im=new Image();im.src=URL.createObjectURL(f);await im.decode();
+    var sc=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),val=await decode(im,Math.round(im.naturalWidth*sc),Math.round(im.naturalHeight*sc));
+    if(val){$("msg").textContent="";add(val)}else $("msg").textContent="Код не распознан. Снимите ближе, чтобы код занимал большую часть кадра, без бликов."}
+  catch(e){$("msg").textContent="Не удалось обработать фото."}});
+go(S.tab||"inv");
+</script>
+</body>
+</html>

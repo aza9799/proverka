@@ -1,0 +1,6 @@
+{
+  "appId": "com.sverka.markirovok",
+  "appName": "Сверка маркировок",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
